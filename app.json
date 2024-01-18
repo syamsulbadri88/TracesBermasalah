@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "Traces Nasional",
+    "slug": "traces-nasional",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logokotak.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/123456.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.uzumaki12.tr",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need your permission to use your camera",
+        "NSPhotoLibraryUsageDescription": "We need your permission to save photos to the local folder",
+        "NSLocationWhenInUseUsageDescription": "We need your location for XYZ.",
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Artboard_1.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.example.yourappname",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERACT_ACROSS_USERS_FULL",
+        "INTERACT_ACROSS_USERS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "backgroundLocationTracking": true,
+      "eas": {
+        "projectId": "fe530b86-f132-44da-a8b2-4d3bb0436af1"
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
+      ]
+    ],
+    "owner": "syamsulbadri"
+  }
+}
