@@ -13,7 +13,8 @@ export default function App({ navigation, route }) {
   const [position, setPosition] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-
+  const { selectedItem } = route.params;
+  const [editedItem, setEditedItem] = useState({ ...selectedItem });
   const [selectedTestItems, setSelectedTestItems] = useState(null);
   const [selectedProvince, setSelectedProvince] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
@@ -26,6 +27,7 @@ export default function App({ navigation, route }) {
   const [selectedCategory4, setSelectedCategory4] = useState([]);
   const [items, setItems] = useState([]);
   const [value, setValue] = useState(null);
+  const [defaultProvince, setDefaultProvince] = useState('');
   const [test, setTest] = useState('');
   const { photo } = route.params;
   const { user } = route.params;
@@ -33,7 +35,7 @@ export default function App({ navigation, route }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('https://twistxd.com/api/tracesjson/daerah12.json');
+        const response = await fetch('https://twistxd.com/api/tracesjson/daerah.json');
         const jsonData = await response.json();
         setItems(jsonData);
       } catch (error) {
@@ -60,7 +62,7 @@ export default function App({ navigation, route }) {
   ];
   const categories4 = [
     { id: 1, name: 'Modern' },
-    { id: 2, name: 'Tradisonal' },
+    { id: 2, name: 'Traditional ' },
   ];
   const dropdownStyles = {
     container: {
@@ -121,7 +123,7 @@ export default function App({ navigation, route }) {
       const { status } = await Camera.requestCameraPermissionsAsync();
       if (status === 'granted') {
         setIsModalVisible(false);
-        navigation.navigate('CameraScreen');
+        navigation.navigate('CameraScreen3');
       } else {
         //console.log('Camera permission denied');
       }
@@ -202,78 +204,65 @@ export default function App({ navigation, route }) {
   // };
 
   const handleSubmit = async () => {
-    if (!name || !position || !address || !selectedDistrict || !selectedProvince || !selectedSubDistrict || !selectedCategory || !selectedCategory2 || !selectedCategory3 || !selectedCategory4 || !photo) {
-      alert("Please fill in all required fields, including the photo.");
-      return;
+    try {
+      const data = new FormData();
+      data.append('customer', editedItem.id_cus);
+      data.append('phone', phone || editedItem.phone_cus);
+      data.append('address', address || editedItem.address);
+      data.append('pic', pic || editedItem.pic);
+      data.append('position', position || editedItem.positionnya);
+      data.append('distric', selectedDistrict?.name || editedItem.distric);
+      data.append('province', selectedProvince?.name || editedItem.province);
+      data.append('subdistric', selectedSubDistrict?.name || editedItem.subdistric);
+      data.append('katagori', selectedCategory?.name || editedItem.katagori); 
+      data.append('tipe_outlet', selectedCategory4?.name || editedItem.tipe_outlet); 
+      data.append('retail_outlet', selectedCategory3?.name || editedItem.retail_outlet); 
+  
+    if (photo && photo.uri) {
+      data.append('images', {
+        name: photo.uri ? photo.uri.split('/').pop() : '',
+        type: mime.getType(photo.uri),
+        uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
+      });
+    } else {
+    
+      data.append('images', {
+        name: editedItem.images.split('/').pop(),
+        type: mime.getType(editedItem.images),
+        uri: Platform.OS === 'ios' ? editedItem.images.replace('file://', '') : editedItem.images,
+      });
     }
 
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const location = await Location.getCurrentPositionAsync({});
-      const lat_input = location.coords.latitude;
-      const lon_input = location.coords.longitude;
+    data.append('images', editedItem.images);
   
-      const data = new FormData();
-      data.append('name', name);
-      data.append('position', position);
-      data.append('address', address);
-      data.append('pic', pic);
-      data.append('phone', phone);
-      data.append('lat', lat_input);
-      data.append('lon', lon_input);
-      data.append('sales', user.id_sales);
-      data.append('manager', 'atasan');
-      data.append('distric', selectedDistrict?.name);
-      data.append('province', selectedProvince?.name);
-      data.append('subdistric', selectedSubDistrict?.name);
-      data.append('katagori', selectedCategory?.name);
-      data.append('retail_order', selectedCategory2?.name);
-      data.append('tipe_outlet', selectedCategory4?.name);
-      data.append('retail_outlet', selectedCategory3?.name);
-  
-      if (photo) {
-        data.append('images', {
-          name: photo.uri ? photo.uri.split('/').pop() : '',
-          type: mime.getType(photo.uri),
-          uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
-        });
-      }
-  
-      //console.log('photo', photo);
-  
-      const response = await fetch(URL_API.url_api + 'input_customer_subdistric_new.php', {
+      const response = await fetch(URL_API.url_api + 'updatecustomer21_uzu.php', {
         method: 'POST',
         body: data,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+  
       const responseBody = await response.text();
       //console.log('Response from backend:', responseBody);
-      
-      //console.log('data finis :', data);
-      setName('');
-      setPic('');
-      setPosition('');
-      setPhone('');
-      setAddress('');
-      // setSelectedProvince(null);
-      // setSelectedDistrict(null);
-      // setSelectedSubDistrict(null);
-      // setselectednamePhoto(null);
-      // setSelectedCategory(null);
-      // setSelectedCategory2(null);
-      // setSelectedCategory4(null);
-      // setSelectedCategory3(null);
-
+  
+  
       alert('Submission successful!');
+      navigation.goBack();
     } catch (error) {
-      
+      console.error('Error submitting data:', error.message);
       alert('Error submitting data. Please try again.');
     }
   };
-
+  
+  useEffect(() => {
+    // Set default province when editedItem changes
+    setDefaultProvince(editedItem.province || '');
+  }, [editedItem]);
   
   return (
 
@@ -286,16 +275,16 @@ export default function App({ navigation, route }) {
         <View style={styles.card}>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.Title}>CUSTOMER</Text>
+            <Text style={styles.Title}>EDIT CUSTOMER</Text>
           </View>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name:</Text>
+            {/* <Text style={styles.label}>Name:</Text>
             <TextInput
               style={styles.underlineInput}
               onChangeText={(text) => setName(text)}
-              value={name}
+              value={name || editedItem.id_cus}
               placeholder="Enter name"
-            />
+            /> */}
           </View>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>PIC:</Text>
@@ -385,49 +374,47 @@ export default function App({ navigation, route }) {
         />
       </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Province: {selectedTestItems ? selectedTestItems.name : ""}</Text>
+      <View style={styles.inputContainer}>
+      <Text style={styles.label}>Province: {selectedTestItems ? selectedTestItems.name : ""}</Text>
 
-            <SearchableDropdown
-              onTextChange={(text) =>
-                console.log(text)}
-                selectedItems={selectedProvince}
-                onItemSelect={(item) => setSelectedProvince(item)}
-                
-                
-                containerStyle={dropdownStyles.container}
-                textInputStyle={dropdownStyles.textInputStyle}
-                itemStyle={dropdownStyles.itemStyle}
-                itemTextStyle={dropdownStyles.itemTextStyle}
-                itemsContainerStyle={dropdownStyles.itemsContainerStyle}
-                items={items}
-                placeholder={ "Province"}
-                resetValue={false} 
-                listProps={
-                  {
-                    nestedScrollEnabled: true,
-                  }
-                }
-                />
-          </View>
+      <SearchableDropdown
+        onTextChange={(text) => console.log(text)}
+        selectedItems={selectedProvince}
+        onItemSelect={(item) => setSelectedProvince(item)}
+        containerStyle={dropdownStyles.container}
+        textInputStyle={dropdownStyles.textInputStyle}
+        itemStyle={dropdownStyles.itemStyle}
+        itemTextStyle={dropdownStyles.itemTextStyle}
+        itemsContainerStyle={dropdownStyles.itemsContainerStyle}
+        items={items}
+        value={defaultProvince}
+        placeholder="Province"
+        resetValue={false}
+        listProps={{
+          nestedScrollEnabled: true,
+        }}
+      />
+      </View>
+
 
           {/* {selectedProvince && ( */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>District:</Text>
             <SearchableDropdown
-              onTextChange={(text) => console.log(text)}
-              selectedItems={selectedDistrict}
-              onItemSelect={(item) => setSelectedDistrict(item)}
-              containerStyle={dropdownStyles.container}
-              textInputStyle={dropdownStyles.textInputStyle}
-              itemStyle={dropdownStyles.itemStyle}
-              itemTextStyle={dropdownStyles.itemTextStyle}
-              itemsContainerStyle={dropdownStyles.itemsContainerStyle}
-              items={selectedProvince?.regions || []}
-              placeholder={"District"}
-              resetValue={false}
+                onTextChange={(text) => console.log(text)}
+                selectedItems={selectedDistrict}
+                onItemSelect={(item) => setSelectedDistrict(item)}
+                containerStyle={dropdownStyles.container}
+                textInputStyle={dropdownStyles.textInputStyle}
+                itemStyle={dropdownStyles.itemStyle}
+                itemTextStyle={dropdownStyles.itemTextStyle}
+                itemsContainerStyle={dropdownStyles.itemsContainerStyle}
+                items={selectedProvince?.regions || []}
+                placeholder={"District"}
+                resetValue={false}
+                defaultInputValue={editedItem.distric}
             />
-          </View>
+            </View>
           {/* )} */}
 
           {/* {selectedDistrict && ( */}
@@ -445,6 +432,7 @@ export default function App({ navigation, route }) {
               items={selectedDistrict?.subdistricts || []}
               placeholder={"Sub District"}
               resetValue={false}
+              defaultInputValue={editedItem.subdistric}
             />
           </View>
 

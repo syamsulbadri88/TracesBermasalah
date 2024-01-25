@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import mime from "mime";
 import {
   KeyboardAvoidingView,
+  FlatList,
+  SafeAreaView,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Image,
-  Dimensions, Platform
+  Dimensions, Platform,
+  RefreshControl 
 } from 'react-native';
 import { Camera } from 'expo-camera';
 import { ScrollView } from 'react-native-virtualized-view'
-import axios from 'axios';
 import * as Location from 'expo-location';
 import URL_API from './URL';
 const windowWidth = Dimensions.get('window').width;
@@ -26,12 +28,13 @@ const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFil
       const filteredItems = data.filter((item) =>
         item.label?.toLowerCase().startsWith(query.toLowerCase())
       );
-      setFilteredData(filteredItems.length > 0 ? filteredItems : []);
+      setFilteredData(filteredItems.length > 0 ? filteredItems : data);
       onSelect(null);
     } catch (error) {
       //console.error('Error while handling search:', error);
     }
   };
+  
 
 
   const handleSelectItem = (item) => {
@@ -113,6 +116,7 @@ const App = ({ navigation, route }) => {
   const [filteredData, setFilteredData] = useState([]);
   const [initialData, setInitialData] = useState([]);
   const [fetchedIdCus, setFetchedIdCus] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { photo } = route.params;
 
   const fetchData = async () => {
@@ -133,8 +137,6 @@ const App = ({ navigation, route }) => {
       }
       const data = await response.json();
       const idCus = data.length > 0 ? data[0].id_cus : null;
-
-      setFetchedIdCus(idCus);
       const customerData = data.map((customer) => ({
         label: customer.name_cus,
         value: customer.id_cus,
@@ -157,11 +159,15 @@ const App = ({ navigation, route }) => {
       setSelectedItem(item);
       if (item) {
         setAddress(item.address);
+        setFetchedIdCus(item.value); 
+        //console.log('Selected Name:', item.label);
       } else {
         setAddress('');
+        setFetchedIdCus(null); // Clear idCus when no item is selected
       }
     } catch (error) {
-      //console.error('Error handling selected item:', error);
+      // Handle error
+      console.error('Error handling selected item:', error);
     }
   };
 
@@ -184,7 +190,11 @@ const App = ({ navigation, route }) => {
   
   const handleCheckIn = async () => {
     //console.log('fetchedIdCus:', fetchedIdCus);
-  
+    if (!photo) {
+      // Show an alert indicating that the photo is required
+      alert("Please provide a photo before checking in.");
+      return;
+    }
     try {
       setIsCheckingIn(true);
       await fetchData();
@@ -277,8 +287,15 @@ const App = ({ navigation, route }) => {
       setIsCheckingIn(false);
     }
   };
-  
-  
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await fetchData();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };  
 
   const handleCheckOut = async () => {
     try {
@@ -355,14 +372,18 @@ const App = ({ navigation, route }) => {
   const [isCheckingIn, setIsCheckingIn] = useState(true);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="position" enabled>
+    <SafeAreaView style={{ flex: 1 }}>
+     <FlatList
+        data={[1]} 
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
       <View style={styles.container}>
         <Text style={styles.title}>Record</Text>
         <View style={[styles.fieldContainer, { width: windowWidth * 0.8 }]}>
           <Text style={styles.fieldLabel}>Name</Text>
           <SearchableDropdown
             data={initialData}
-            onSelect={handleSelectItem}
+            onSelect={(item) => handleSelectItem(item)} // Use an inline function to pass the item
             selectedItem={selectedItem}
             filteredData={filteredData}
             setFilteredData={setFilteredData}
@@ -418,13 +439,24 @@ const App = ({ navigation, route }) => {
           <Text style={styles.buttonText}>{isCheckingIn ? 'Check In' : 'Check Out'}</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+
+)}
+      keyboardShouldPersistTaps="always"
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh} 
+        />
+      }
+    />
+  </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    height: 750,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'white',

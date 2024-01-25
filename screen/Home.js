@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   columnHeader: {
     fontWeight: 'bold',
     fontSize: 16,
-    width:'40%',
+    width:'38%',
     color: '#555555',
   },
   cell: {

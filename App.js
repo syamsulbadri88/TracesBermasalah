@@ -6,10 +6,12 @@ import LoginScreen from './screen/Login';
 import LoginScreen2 from './screen/Welcome';
 import CameraScreen from './screen/CameraScreen';
 import CameraScreen2 from './screen/CameraScreen2';
+import CameraScreen3 from './screen/CameraScreen3';
 import HomeScreen from './screen/Home';
 import ReportScreen from './screen/Reports';
 import RecordScreen from './screen/Records';
 import EodScreen from './screen/Eods';
+import EditScreen from './screen/EditScreen'
 import CostumerScreen from './screen/Customer';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -34,9 +36,9 @@ const MainTabScreen = ({ route }) => {
             case 'Reports':
               iconName = focused ? 'analytics' : 'analytics-outline';
               break;
-            case 'Records':
-              iconName = focused ? 'list' : 'list-outline';
-              break;
+            case 'Visit':
+                iconName = focused ? 'location-sharp' : 'location-outline';
+                break;
             case 'Eods':
               iconName = focused ? 'calendar' : 'calendar-outline';
               break;
@@ -52,7 +54,7 @@ const MainTabScreen = ({ route }) => {
     >
       <Tab.Screen name="HomeTab" component={HomeScreen} initialParams={{ user, photo }} />
       <Tab.Screen name="Customer" component={CostumerScreen} initialParams={{ user, photo }} />
-      <Tab.Screen name="Records" component={RecordScreen} initialParams={{ user, photo }} />
+      <Tab.Screen name="Visit" component={RecordScreen} initialParams={{ user, photo }} />
       <Tab.Screen name="Reports" component={ReportScreen} initialParams={{ user, photo }} options={{ tabBarLabel: 'Reports' }} />
       <Tab.Screen name="Eods" component={EodScreen} initialParams={{ user, photo }} options={{ tabBarLabel: 'Eods' }} />
     </Tab.Navigator>
@@ -72,9 +74,11 @@ const App = () => {
           },
         })}
         />
+        <Stack.Screen name="EditScreen" component={EditScreen} options={{ headerShown: false }} />
         <Stack.Screen name="login2" component={LoginScreen2} options={{ headerShown: false }} />
         <Stack.Screen name="CameraScreen" component={CameraScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="CameraScreen2" component={CameraScreen2} options={{ headerShown: false }}/>
+        <Stack.Screen name="CameraScreen3" component={CameraScreen3} options={{ headerShown: false }}/>
       </Stack.Navigator>
     </NavigationContainer>
   );

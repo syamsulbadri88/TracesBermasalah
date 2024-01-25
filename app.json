@@ -4,16 +4,14 @@
     "slug": "traces-nasional",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logokotak.png",
+    "icon": "./assets/baru123.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/123456.png",
+      "image": "./assets/baru111.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#52C5D8"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -24,15 +22,13 @@
         "NSCameraUsageDescription": "We need your permission to use your camera",
         "NSPhotoLibraryUsageDescription": "We need your permission to save photos to the local folder",
         "NSLocationWhenInUseUsageDescription": "We need your location for XYZ.",
-        "UIBackgroundModes": [
-          "location"
-        ]
+        "UIBackgroundModes": ["location"]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Artboard_1.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/baru123.png",
+        "backgroundColor": "#52C5D8"
       },
       "package": "com.example.yourappname",
       "permissions": [
@@ -53,6 +49,10 @@
     },
     "extra": {
       "backgroundLocationTracking": true,
+      "myCustomConfig": {
+        "someKey": "someValue",
+        "anotherKey": "anotherValue"
+      },
       "eas": {
         "projectId": "fe530b86-f132-44da-a8b2-4d3bb0436af1"
       }
@@ -69,8 +69,40 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 33,
+            "targetSdkVersion": 33,
+            "buildToolsVersion": "33.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "13.0"
+          }
+        }
       ]
     ],
     "owner": "syamsulbadri"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview2": {
+      "android": {
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "preview3": {
+      "developmentClient": true
+    },
+    "preview4": {
+      "distribution": "internal"
+    },
+    "production": {}
   }
 }

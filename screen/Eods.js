@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import URL_API from './URL';
@@ -13,48 +13,55 @@ const EODSComponent = () => {
   const [selectedOption, setSelectedOption] = useState('');
 
   const handleYesButton = async () => {
-    try {
-      const response = await fetch(URL_API.url_api + 'input_absensi_uzu.php', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+    Alert.alert(
+      'Confirmation',
+      'Are you sure you want to submit the End of Day Summary with "Yes"?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
         },
-        body: JSON.stringify({
-          usridnya: user.id_sales,
-          mobile_idnya: 1,
-          absensi_mode_idnya: '1',
-          latitudenya: location ? location.latitude : 0,
-          longitudenya: location ? location.longitude : 0,
-        }),
-      });
-  
-      if (!response.ok) {
-        //console.error('Absensi failed:', response.statusText);
-        alert('Absensi failed.');
-        return;
-      }
-  
-      const responseBody = await response.json();
-      //console.log('Response Body:', responseBody);
-  
-      if (responseBody.msg == 'Successfully') {
-        if ( responseBody.msg === 'Successfully') {
-          navigation.navigate('Login');
-        } else {
-          //console.error('Absensi failed:', responseBody.msg);
-          alert('Absensi failed.');
-        }
-      } else {
-        //console.error('Absensi failed:', responseBody.msg);
-        alert('Absensi failed.');
-      }
-    } catch (error) {
-      //console.error('Absensi error:', error);
-      alert('An error occurred during absensi.');
-    }
+        {
+          text: 'Yes',
+          onPress: async () => {
+            try {
+              const response = await fetch(URL_API.url_api + 'input_absensi_uzu.php', {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  usridnya: user.id_sales,
+                  mobile_idnya: 1,
+                  absensi_mode_idnya: '1',
+                  latitudenya: location ? location.latitude : 0,
+                  longitudenya: location ? location.longitude : 0,
+                }),
+              });
+
+              if (!response.ok) {
+                alert('Absensi failed.');
+                return;
+              }
+
+              const responseBody = await response.json();
+
+              if (responseBody.msg === 'Successfully') {
+                navigation.navigate('Login');
+              } else {
+                alert('Absensi failed.');
+              }
+            } catch (error) {
+              alert('An error occurred during absensi.');
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
-  
+
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -62,10 +69,10 @@ const EODSComponent = () => {
         const locationResult = await Location.getCurrentPositionAsync({});
         setLocation(locationResult.coords);
       } else {
-        //console.error('Location permission denied');
+        // Handle location permission denied
       }
     } catch (error) {
-      //console.error('Error getting location:', error);
+      // Handle error getting location
     }
   };
 
@@ -75,10 +82,6 @@ const EODSComponent = () => {
   };
 
   useEffect(() => {
-    // if (user && user.usridnya) {
-    //   setusridnya(user.usridnya);
-    // }
-
     navigation.setOptions({
       headerTitle: () => (
         <Image

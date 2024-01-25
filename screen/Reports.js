@@ -8,9 +8,9 @@ import {
   StyleSheet,
   Image,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import ImageViewer from 'react-native-image-zoom-viewer';
 import URL_API from './URL';
 import moment from 'moment';
 
@@ -28,6 +28,7 @@ const HomeScreen = ({ navigation, route }) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [isModalVisible1, setModalVisible1] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedVisitDetails, setSelectedVisitDetails] = useState(null);
   const { user } = route.params;
 
@@ -43,6 +44,14 @@ const HomeScreen = ({ navigation, route }) => {
     setDatePickerVisibility(false);
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    // Perform data fetching or refreshing logic here
+    fetchData(); // Assuming fetchData is your data fetching function
+    fetchVisitData(); // Assuming fetchVisitData is your visits data fetching function
+    setRefreshing(false);
+  };
+  
   const handleConfirm = (date) => {
     hideDatePicker();
   
@@ -147,6 +156,7 @@ const HomeScreen = ({ navigation, route }) => {
         <View style={styles.cardTextContainer}>
           <Text style={styles.customerItemText}>Nama: {item.name_cus}</Text>
           <Text>Phone: {item.phone_cus}</Text>
+          {/* <Text>Id Cus: {item.id_cus}</Text> */}
         </View>
       </TouchableOpacity>
     </View>
@@ -253,6 +263,9 @@ const HomeScreen = ({ navigation, route }) => {
             item.id ? item.id.toString() : index.toString()
           }
           renderItem={renderCustomerItem}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       </View>
     )}
@@ -269,7 +282,7 @@ const HomeScreen = ({ navigation, route }) => {
           <Image source={{ uri: selectedButton === 'Customer' ? selectedItem?.images : selectedItem?.images }} style={styles.modalImage} />
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Nama:</Text>{selectedButton === 'Customer' ? selectedItem?.name_cus : selectedItem?.name_cus}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Phone:</Text> {selectedButton === 'Customer' ? selectedItem?.phone_cus : selectedItem?.phone_cus}</Text>
-          <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Alamat:</Text> {selectedButton === 'Customer' ? selectedItem?.address : selectedItem?.address}</Text>
+          {/* <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Alamat:</Text> {selectedButton === 'Customer' ? selectedItem?.address : selectedItem?.address}</Text> */}
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Pic:</Text> {selectedButton === 'Customer' ? selectedItem?.pic : selectedItem?.pic}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Position:</Text> {selectedButton === 'Customer' ? selectedItem?.positionnya : selectedItem?.positionnya}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Address:</Text> {selectedButton === 'Customer' ? selectedItem?.address : ''}</Text>
@@ -277,9 +290,18 @@ const HomeScreen = ({ navigation, route }) => {
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Province:</Text> {selectedButton === 'Customer' ? selectedItem?.province : ''}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Sub District:</Text> {selectedButton === 'Customer' ? selectedItem?.subdistric : ''}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Category:</Text> {selectedButton === 'Customer' ? selectedItem?.katagori : ''}</Text>
-          <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Retail Order:</Text> {selectedButton === 'Customer' ? selectedItem?.retail_order : ''}</Text>
+          {/* <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Retail Order:</Text> {selectedButton === 'Customer' ? selectedItem?.retail_order : ''}</Text> */}
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Tipe Outlet:</Text> {selectedButton === 'Customer' ? selectedItem?.tipe_outlet : ''}</Text>
           <Text style={styles.modalText}><Text style={{ fontWeight: 'bold' }}>Retail Outlet:</Text> {selectedButton === 'Customer' ? selectedItem?.retail_outlet : ''}</Text>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => {
+              setModalVisible(false);
+              navigation.navigate('EditScreen', { selectedItem });
+            }}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
            <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setModalVisible(false)}
@@ -355,6 +377,9 @@ const HomeScreen = ({ navigation, route }) => {
             item.id ? item.id.toString() : index.toString()
           }
           renderItem={renderVisitItem}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           />
           )}
 
@@ -449,6 +474,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   closeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  editButton: {
+    marginTop: 20,
+    backgroundColor: '#3498db',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  editButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },

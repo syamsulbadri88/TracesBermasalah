@@ -33,7 +33,7 @@ export default function CameraScreen({ navigation }) {
 
   const savePicture = () => {
     setIsPreview(false);
-    navigation.navigate('Visit', { photo });
+    navigation.navigate('EditScreen', { photo });
   };
 
   const toggleCameraType = () => {
