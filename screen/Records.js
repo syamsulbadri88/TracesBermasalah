@@ -11,7 +11,8 @@ import {
   StyleSheet,
   Image,
   Dimensions, Platform,
-  RefreshControl 
+  RefreshControl,
+  ActivityIndicator 
 } from 'react-native';
 import { Camera } from 'expo-camera';
 import { ScrollView } from 'react-native-virtualized-view'
@@ -19,23 +20,21 @@ import * as Location from 'expo-location';
 import URL_API from './URL';
 const windowWidth = Dimensions.get('window').width;
 
-const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFilteredData }) => {
+const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFilteredData , editable }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (query) => {
     setSearchQuery(query);
     try {
       const filteredItems = data.filter((item) =>
-        item.label?.toLowerCase().startsWith(query.toLowerCase())
+        item.label?.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredData(filteredItems.length > 0 ? filteredItems : data);
       onSelect(null);
     } catch (error) {
       //console.error('Error while handling search:', error);
     }
-  };
-  
-
+  };  
 
   const handleSelectItem = (item) => {
     try {
@@ -54,6 +53,7 @@ const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFil
           placeholder="Search..."
           value={selectedItem ? selectedItem.label : searchQuery}
           onChangeText={handleSearch}
+          editable={editable}
           onFocus={() => onSelect(null)}
         />
       </View>
@@ -117,6 +117,7 @@ const App = ({ navigation, route }) => {
   const [initialData, setInitialData] = useState([]);
   const [fetchedIdCus, setFetchedIdCus] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { photo } = route.params;
 
   const fetchData = async () => {
@@ -141,8 +142,10 @@ const App = ({ navigation, route }) => {
         label: customer.name_cus,
         value: customer.id_cus,
         address: customer.pic,
+        status_aktif: customer.status_aktif,
+        id_cus : customer.id_cus,
       }));
-  
+      
       setInitialData(customerData);
       setFilteredData(customerData);
     } catch (error) {
@@ -151,8 +154,47 @@ const App = ({ navigation, route }) => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(); 
+  
+    const checkIfCheckOutDataExists = async () => {
+      try {
+        const response = await fetch(URL_API.url_api + 'open_chekin.php', {
+          method: 'POST',
+          body: JSON.stringify({
+            sales: user.id_sales,
+          }),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (!response.ok) {
+          //console.log('Network response was not ok');
+          setIsCheckingIn(true); 
+          return;
+        }
+  
+        const responseText = await response.text();
+        //console.log('Response from open_chekin:', responseText);
+  
+        try {
+          const data = JSON.parse(responseText);
+          const hasCheckOutData = data.length > 0;
+          setIsCheckingIn(!hasCheckOutData); 
+        } catch (error) {
+          //console.error('Error parsing response from open_chekin:', error);
+          setIsCheckingIn(true); 
+        }
+      } catch (error) {
+        //console.error('Error during check:', error);
+        setIsCheckingIn(true); 
+      }
+    };
+  
+    checkIfCheckOutDataExists();
+  }, [user.id_sales, setIsCheckingIn]);
+  
 
   const handleSelectItem = (item) => {
     try {
@@ -160,14 +202,13 @@ const App = ({ navigation, route }) => {
       if (item) {
         setAddress(item.address);
         setFetchedIdCus(item.value); 
-        //console.log('Selected Name:', item.label);
+        //console.log('Selected Name:', item.id_cus, 'Status visit:',item.status_aktif);
       } else {
         setAddress('');
-        setFetchedIdCus(null); // Clear idCus when no item is selected
+        setFetchedIdCus(null);
       }
     } catch (error) {
-      // Handle error
-      console.error('Error handling selected item:', error);
+      //console.error('Error handling selected item:', error);
     }
   };
 
@@ -190,7 +231,7 @@ const App = ({ navigation, route }) => {
   
   const handleCheckIn = async () => {
     //console.log('fetchedIdCus:', fetchedIdCus);
-    if (!photo) {
+    if (!photo || photo.uri === null) {
       // Show an alert indicating that the photo is required
       alert("Please provide a photo before checking in.");
       return;
@@ -214,7 +255,7 @@ const App = ({ navigation, route }) => {
         body.append('lat', lat_input);
         body.append('lon', lon_input);
         body.append('sales', user.id_sales);
-  
+
         if (photo) {
           body.append('imagein', {
             name: photo.uri ? photo.uri.split('/').pop() : '',
@@ -229,6 +270,7 @@ const App = ({ navigation, route }) => {
         });
   
         //console.log('Data sent in the request:', body);
+        // navigation.navigate('HomeTab');
   
         if (!response1.ok) {
           //console.error('Check-in failed:', response1.statusText);
@@ -245,7 +287,6 @@ const App = ({ navigation, route }) => {
           if (responseData.msg === '1') {
             setIsCheckingIn(false);
           } else {
-            //console.error('Check-in failed:', responseData);
             setIsCheckingIn(false);
             return;
           }
@@ -273,6 +314,10 @@ const App = ({ navigation, route }) => {
         try {
           const data1 = JSON.parse(responseText2);
           const idVisitFromResponse2 = data1.length > 0 ? data1[0].id_visit : '';
+          const statusVisitFromResponse2 = data1.length > 0 ? data1[0].status_visit : '';
+
+          //console.log('Visit ID:', idVisitFromResponse2);
+          //console.log('Status Visit:', statusVisitFromResponse2);
   
           //console.log('Visitnya =>' + idVisitFromResponse2);
         } catch (error) {
@@ -300,7 +345,7 @@ const App = ({ navigation, route }) => {
   const handleCheckOut = async () => {
     try {
       setIsCheckingIn(true);
-
+  
       const { status } = await Location.requestForegroundPermissionsAsync();
       const response22 = await fetch(URL_API.url_api + 'open_chekin.php', {
         method: 'POST',
@@ -312,28 +357,28 @@ const App = ({ navigation, route }) => {
           sales: user.id_sales,
         }),
       });
-
-      //console.log(response22);
-
+  
       if (!response22.ok) {
         //console.log('Network response was not ok');
       }
-
+  
       const data12 = await response22.json();
+      //console.log('Data from open_chekin:', data12);
+  
       const idVisitFromResponse2 = data12.length > 0 ? data12[0].id_visit : '';
-
-      //console.log('Visitnya =>' + idVisitFromResponse2);
-
+  
+      //console.log('Visit ID from open_chekin:', idVisitFromResponse2);
+  
       if (!idVisitFromResponse2) {
         //console.error('No valid visit available.');
         setIsCheckingIn(false);
         return;
       }
-
+  
       const location = await Location.getCurrentPositionAsync({});
       const lat_input = location.coords.latitude;
       const lon_input = location.coords.longitude;
-
+  
       const response = await fetch(URL_API.url_api + 'updatevisit_uzu.php', {
         method: 'POST',
         headers: {
@@ -346,28 +391,38 @@ const App = ({ navigation, route }) => {
           lon: lon_input,
           sales: user.id_sales,
           idvisit: idVisitFromResponse2,
-        }),
+        })
       });
-
+  
       //console.log('Check-out response status:', response.status);
-
+  
       if (!response.ok) {
         //console.error('Check-out failed:', response.statusText);
         setIsCheckingIn(false);
       } else {
         const responseData = await response.json();
-        if (responseData !== null && typeof responseData === 'object') {
-          //console.log('Check-out response data:', responseData);
+        //console.log('Check-out response data:', responseData);
+  
+        if (responseData.msg === "0") {
+          //setIsCheckingIn(false);
+          navigation.navigate('HomeTab');
+          setSelectedItem(null);
+          setNote('');
+          setAddress('');
+          if (route.params.photo && route.params.photo.uri) {
+            route.params.photo.uri = null;
+          }
         } else {
-          //console.error('Check-out failed with server error: Response data is null');
+          //console.error('Check-out failed with server error: Response data is not as expected');
           setIsCheckingIn(false);
         }
       }
     } catch (error) {
-      ////console.error('Error during check-out:', error);
+      //console.error('Error during check-out:', error);
       setIsCheckingIn(false);
     }
   };
+  
 
   const [isCheckingIn, setIsCheckingIn] = useState(true);
 
@@ -383,9 +438,10 @@ const App = ({ navigation, route }) => {
           <Text style={styles.fieldLabel}>Name</Text>
           <SearchableDropdown
             data={initialData}
-            onSelect={(item) => handleSelectItem(item)} // Use an inline function to pass the item
+            onSelect={(item) => handleSelectItem(item)} 
             selectedItem={selectedItem}
             filteredData={filteredData}
+            editable={isCheckingIn}
             setFilteredData={setFilteredData}
             itemsContainerStyle={styles.itemsContainerStyle}
           />
@@ -406,6 +462,7 @@ const App = ({ navigation, route }) => {
           <TextInput
             value={note}
             onChangeText={setNote}
+            editable={isCheckingIn}
             placeholder="Enter note"
             style={[styles.input, { width: windowWidth * 0.8 }]}
           />
@@ -413,6 +470,7 @@ const App = ({ navigation, route }) => {
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>image</Text>
           {photo && photo.uri && <Image source={{ uri: photo.uri }} style={styles.image} />}
+      
         </View>
         <TouchableOpacity
           style={styles.cameraButton}
@@ -425,19 +483,33 @@ const App = ({ navigation, route }) => {
           style={[
             styles.button,
             {
-              backgroundColor: isCheckingIn ? '#52C5D8' : 'red',
+              backgroundColor: isCheckingIn ? '#52c5d8' : '#f5b01a',
             },
           ]}
           onPress={() => {
+            if (loading) {
+              return;
+            }
+
+            setLoading(true);
+
             if (isCheckingIn) {
-              handleCheckIn();
+              handleCheckIn().finally(() => setLoading(false));
             } else {
-              handleCheckOut();
+              handleCheckOut().finally(() => setLoading(false));
             }
           }}
         >
-          <Text style={styles.buttonText}>{isCheckingIn ? 'Check In' : 'Check Out'}</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {isCheckingIn ? 'Check In' : 'Check Out'}
+            </Text>
+          )}
         </TouchableOpacity>
+
+
       </View>
 
 )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Platform, View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
+import { SafeAreaView, StyleSheet, Platform, ActivityIndicator, View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
 import SearchableDropdown from 'react-native-searchable-dropdown';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -24,6 +24,7 @@ export default function App({ navigation, route }) {
   const [selectedCategory2, setSelectedCategory2] = useState([]);
   const [selectedCategory3, setSelectedCategory3] = useState([]);
   const [selectedCategory4, setSelectedCategory4] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [value, setValue] = useState(null);
   const [test, setTest] = useState('');
@@ -202,12 +203,13 @@ export default function App({ navigation, route }) {
   // };
 
   const handleSubmit = async () => {
-    if (!name || !position || !address || !selectedDistrict || !selectedProvince || !selectedSubDistrict || !selectedCategory || !selectedCategory2 || !selectedCategory3 || !selectedCategory4 || !photo) {
-      alert("Please fill in all required fields, including the photo.");
+    if (!name || !position || !address || !selectedDistrict || !selectedProvince || !selectedSubDistrict || !selectedCategory || !selectedCategory2 || !selectedCategory3 || !selectedCategory4 || !photo || phone && phone.length < 10) {
+      alert("Please fill in all required fields, including a valid phone number with at least 10 digits.");
       return;
     }
 
     try {
+      setLoading(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       const location = await Location.getCurrentPositionAsync({});
       const lat_input = location.coords.latitude;
@@ -258,6 +260,9 @@ export default function App({ navigation, route }) {
       setPosition('');
       setPhone('');
       setAddress('');
+      setLoading(false);
+      navigation.navigate('HomeTab');
+      route.params.photo.uri = null;
       // setSelectedProvince(null);
       // setSelectedDistrict(null);
       // setSelectedSubDistrict(null);
@@ -459,10 +464,13 @@ export default function App({ navigation, route }) {
           >
             <Image source={require('../assets/takefotonew.png')} style={styles.cameraIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
             <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
-
+          )}
+        </TouchableOpacity>
         </View>
       </View>
 )}

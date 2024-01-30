@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { Camera } from 'expo-camera';
 import { AntDesign } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 export default function CameraScreen({ navigation }) {
   const [hasPermission, setHasPermission] = useState(null);
@@ -21,7 +22,14 @@ export default function CameraScreen({ navigation }) {
   const takePicture = async () => {
     if (cameraRef) {
       const { uri } = await cameraRef.takePictureAsync();
-      setPhoto({ uri });
+  
+      const resizedPhoto = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }], 
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+  
+      setPhoto({ uri: resizedPhoto.uri });
       setIsPreview(true);
     }
   };

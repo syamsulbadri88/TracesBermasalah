@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Platform, View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
+import { SafeAreaView, StyleSheet, Platform, ActivityIndicator, View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
 import SearchableDropdown from 'react-native-searchable-dropdown';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -25,6 +25,7 @@ export default function App({ navigation, route }) {
   const [selectedCategory2, setSelectedCategory2] = useState([]);
   const [selectedCategory3, setSelectedCategory3] = useState([]);
   const [selectedCategory4, setSelectedCategory4] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [value, setValue] = useState(null);
   const [defaultProvince, setDefaultProvince] = useState('');
@@ -204,7 +205,12 @@ export default function App({ navigation, route }) {
   // };
 
   const handleSubmit = async () => {
+    if (phone && phone.length < 10) {
+      alert("Please enter a valid phone number with at least 10 digits.");
+      return;
+    }
     try {
+      setLoading(true);
       const data = new FormData();
       data.append('customer', editedItem.id_cus);
       data.append('phone', phone || editedItem.phone_cus);
@@ -250,12 +256,16 @@ export default function App({ navigation, route }) {
       const responseBody = await response.text();
       //console.log('Response from backend:', responseBody);
   
-  
+      // setLoading(false);
+      //route.params.photo.uri = null;
+      //console.log(route.params.photo.uri);
       alert('Submission successful!');
       navigation.goBack();
     } catch (error) {
       console.error('Error submitting data:', error.message);
       alert('Error submitting data. Please try again.');
+    } finally {
+      setLoading(false); 
     }
   };
   
@@ -447,9 +457,13 @@ export default function App({ navigation, route }) {
           >
             <Image source={require('../assets/takefotonew.png')} style={styles.cameraIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
             <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
+          )}
+        </TouchableOpacity>
 
         </View>
       </View>
