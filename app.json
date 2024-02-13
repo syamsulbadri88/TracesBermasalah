@@ -2,7 +2,7 @@
   "expo": {
     "name": "Traces Nasional",
     "slug": "traces-nasional",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/baru123.png",
     "userInterfaceStyle": "light",
@@ -13,7 +13,9 @@
     },
     "assetBundlePatterns": ["**/*"],
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     },
     "ios": {
       "supportsTablet": true,
@@ -32,6 +34,8 @@
       },
       "package": "com.example.yourappname",
       "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE", 
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
@@ -74,6 +78,9 @@
         "expo-build-properties",
         {
           "android": {
+            "config": {
+              "useNextNetworkSecurityConfig": true
+            },
             "compileSdkVersion": 33,
             "targetSdkVersion": 33,
             "buildToolsVersion": "33.0.0"

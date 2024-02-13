@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import axios from 'axios';
 import URL_API from './URL';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const LoginScreen = ({ navigation }) => {
@@ -13,7 +14,7 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [user, setUser] = useState(null);
-  const [authToken, setAuthToken] = useState('');
+  //const [authToken, setAuthToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
 
@@ -21,6 +22,7 @@ const LoginScreen = ({ navigation }) => {
 
   useEffect(() => {
     getCurrentLocation();
+    checkRememberedCredentials();
   }, []);
 
   const getCurrentLocation = async () => {
@@ -40,46 +42,68 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     try {
       setLoading(true);
-  
-      const response = await axios.post(URL_API.url_api + 'open_user.php', {
-        username: username,
-        password: password,
-      });
-  
-      if (response.status === 200) {
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          const user = response.data[0];
-          setUser(user);
-  
-          setLoading(false);
-
-          //console.log('User data:', user);
-  
-          if (user.id_sales) {
-            checkAbsenStatus(user);
-          } else {
-           // console.error('ID Sales is undefined in user object:', user);
-            alert('ID Sales is undefined. Check user data structure.');
-          }
+      //console.log(rememberMe);
+      if (rememberMe) {
+        await AsyncStorage.setItem('username', username);
+        await AsyncStorage.setItem('password', password);
+        // setUsername('');
+        // setPassword('');
+        // setRememberMe(false);
+        // setUser(null);
+        // setLoading(false);
+        // setLocation(null);
+      }else{
+        AsyncStorage.clear();
+      }
+      let response;
+      try {
+        response = await axios.post(URL_API.url_api + 'open_user.php', {
+          username: username,
+          password: password,
+        });
+        
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          throw new Error('Invalid credentials');
         } else {
-          alert('Login failed. User not found.');
-          setLoading(false);
+          throw new Error('An error occurred. Please try again.');
         }
-      } else if (response.status === 401) {
-        alert('Login failed. Invalid credentials.');
+      }
+  
+      if (response.status === 200 && Array.isArray(response.data) && response.data.length > 0) {
+        const user = response.data[0];
+        setUser(user);
         setLoading(false);
+        //setRememberMe(false);
+  
+        if (user.id_sales) {
+          checkAbsenStatus(user);
+        } else {
+          alert('ID Sales is undefined. Check user data structure.');
+        }
       } else {
-        alert('Login failed. An error occurred.');
-        setLoading(false);
+        throw new Error('Login failed. User not found.');
       }
     } catch (error) {
-      //console.error('Login error:', error);
-      alert('An error occurred during login.');
+      alert(error.message);
       setLoading(false);
     }
   };
   
   
+  const checkRememberedCredentials = async () => {
+    try {
+      const rememberedUsername = await AsyncStorage.getItem('username');
+      const rememberedPassword = await AsyncStorage.getItem('password');
+      if (rememberedUsername && rememberedPassword) {
+        setUsername(rememberedUsername);
+        setPassword(rememberedPassword);
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.log("error rememberme 2");
+    }
+  };
   const checkAbsenStatus = async (user) => {
     try {
       const absenResponse = await axios.post('https://twistxd.com/apitraces/sudah_absen.php', {

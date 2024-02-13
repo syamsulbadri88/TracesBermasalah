@@ -20,7 +20,7 @@ import * as Location from 'expo-location';
 import URL_API from './URL';
 const windowWidth = Dimensions.get('window').width;
 
-const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFilteredData , editable }) => {
+const SearchableDropdown = ({ data, onSelect, selectedItem, filteredData, setFilteredData, editable }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (query) => {
@@ -109,7 +109,7 @@ const App = ({ navigation, route }) => {
       //console.error('Error setting navigation options:', error);
     }
   }, [user]);
-
+  const [isOnline, setIsOnline] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
@@ -119,18 +119,20 @@ const App = ({ navigation, route }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const { photo } = route.params;
+  CekNet = () => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+        console.log("Connection type", state.type);
+        console.log("Is connected?", state.isConnected);
+        setIsOnline(state.isConnected);
+    });
+
+    unsubscribe();
+}
 
   const fetchData = async () => {
     try {
-      const response = await fetch(URL_API.url_api + 'open_customer.php', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sales: user.id_sales,
-        }),
+      const response = await fetch(URL_API.url_api + `gabung_report_uzu.php?type=sales&sales=${user.id_sales}`, {
+        method: 'GET',
       });
   
       if (!response.ok) {
@@ -158,15 +160,8 @@ const App = ({ navigation, route }) => {
   
     const checkIfCheckOutDataExists = async () => {
       try {
-        const response = await fetch(URL_API.url_api + 'open_chekin.php', {
-          method: 'POST',
-          body: JSON.stringify({
-            sales: user.id_sales,
-          }),
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+        const response = await fetch(URL_API.url_api + `gabung_report_uzu.php?type=salesVisit&sales=${user.id_sales}`, {
+          method: 'GET',
         });
   
         if (!response.ok) {
@@ -232,7 +227,6 @@ const App = ({ navigation, route }) => {
   const handleCheckIn = async () => {
     //console.log('fetchedIdCus:', fetchedIdCus);
     if (!photo || photo.uri === null) {
-      // Show an alert indicating that the photo is required
       alert("Please provide a photo before checking in.");
       return;
     }
@@ -257,16 +251,17 @@ const App = ({ navigation, route }) => {
         body.append('sales', user.id_sales);
 
         if (photo) {
+          const fileName = `${user.id_sales}_${photo.uri ? photo.uri.split('/').pop() : ''}`;
           body.append('imagein', {
-            name: photo.uri ? photo.uri.split('/').pop() : '',
+            name: fileName,
             type: mime.getType(photo.uri),
             uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
           });
-        }
+        }        
   
-        const response1 = await fetch(URL_API.url_api + 'input_visitasi_bfoto_uzu.php', {
-          method: 'POST',
-          body: body,
+        const response1 =await fetch(URL_API.url_api + 'input_visitasi_bfoto_uzu.php', {
+            method: 'POST',
+            body: body,
         });
   
         //console.log('Data sent in the request:', body);
@@ -291,15 +286,8 @@ const App = ({ navigation, route }) => {
             return;
           }
         }
-        const response2 = await fetch(URL_API.url_api + 'open_chekin.php', {
-          method: 'POST',
-          body: JSON.stringify({
-            sales: user.id_sales,
-          }),
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+        const response2 = await fetch(URL_API.url_api + `gabung_report_uzu.php?type=salesVisit&sales=${user.id_sales}`, {
+          method: 'GET',
         });
   
         if (!response2.ok) {
@@ -347,15 +335,9 @@ const App = ({ navigation, route }) => {
       setIsCheckingIn(true);
   
       const { status } = await Location.requestForegroundPermissionsAsync();
-      const response22 = await fetch(URL_API.url_api + 'open_chekin.php', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sales: user.id_sales,
-        }),
+      const response22 = await fetch(URL_API.url_api + `gabung_report_uzu.php?type=salesVisit&sales=${user.id_sales}`, {
+        method: 'GET',
+        
       });
   
       if (!response22.ok) {
@@ -428,6 +410,12 @@ const App = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      <View style={styles.onlineStatus}>
+          <Text style={isOnline ? styles.onlineText : styles.offlineText}>
+              {isOnline ? 'Online' : 'Offline'}
+          </Text>
+      </View>
+
      <FlatList
         data={[1]} 
         keyExtractor={(item, index) => index.toString()}
@@ -494,9 +482,39 @@ const App = ({ navigation, route }) => {
             setLoading(true);
 
             if (isCheckingIn) {
-              handleCheckIn().finally(() => setLoading(false));
+              Promise.race([
+                handleCheckIn(),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('Check-in request timeout')), 10000)
+                ),
+              ]).finally(() => setLoading(false)).catch(error => {
+                //console.error('Error during check-in:', error.message);
+                setLoading(false);
+                alert('Check-in request timed out. Please try again.');
+              });
             } else {
-              handleCheckOut().finally(() => setLoading(false));
+              const checkoutPromise = handleCheckOut();
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Check-out request timeout')), 10000)
+              );
+
+              Promise.race([checkoutPromise, timeoutPromise])
+                .then(() => {
+                  setLoading(false);
+                })
+                .catch(error => {
+
+                  if (error.message === 'Check-out request timeout') {
+
+                    setLoading(false);
+                    alert('Check-out request timed out. Please try again.');
+                    setIsCheckingIn(false); 
+                  } else {
+                    
+                    setLoading(false);
+                    alert('Error during check-out. Please try again.');
+                  }
+                });
             }
           }}
         >
@@ -508,6 +526,7 @@ const App = ({ navigation, route }) => {
             </Text>
           )}
         </TouchableOpacity>
+
 
 
       </View>
@@ -533,6 +552,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'white',
   },
+  onlineStatus: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+},
+onlineText: {
+    color: 'green',
+    fontWeight: 'bold',
+},
+offlineText: {
+    color: 'red',
+    fontWeight: 'bold',
+},
+
   image: {
     width: 100,
     height: 50,

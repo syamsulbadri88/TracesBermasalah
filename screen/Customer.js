@@ -4,7 +4,6 @@ import SearchableDropdown from 'react-native-searchable-dropdown';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import mime from 'mime';
-//import daerah from 'https://twistxd.com/api/tracesjson/daerah.json';
 import URL_API from './URL';
 
 export default function App({ navigation, route }) {
@@ -201,17 +200,27 @@ export default function App({ navigation, route }) {
   //     alert('Error submitting data. Please try again.');
   //   }
   // };
-
+  //console.log(photo);
   const handleSubmit = async () => {
-    if (!name || !position || !address || !selectedDistrict || !selectedProvince || !selectedSubDistrict || !selectedCategory || !selectedCategory2 || !selectedCategory3 || !selectedCategory4 || !photo || phone && phone.length < 10) {
+    if (!name || !position || !address || !selectedDistrict || !selectedProvince || !selectedSubDistrict || !selectedCategory || !selectedCategory2 || !selectedCategory3 || !selectedCategory4 || !photo || (phone && phone.length < 10)) {
       alert("Please fill in all required fields, including a valid phone number with at least 10 digits.");
       return;
     }
-
+  
     try {
       setLoading(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const location = await Location.getCurrentPositionAsync({});
+  
+      const timeoutPromise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error('Timeout occurred while submitting data.'));
+        }, 10000); 
+      });
+  
+      const [locationPermission, location] = await Promise.all([
+        Location.requestForegroundPermissionsAsync(),
+        Location.getCurrentPositionAsync({})
+      ]);
+  
       const lat_input = location.coords.latitude;
       const lon_input = location.coords.longitude;
   
@@ -234,50 +243,52 @@ export default function App({ navigation, route }) {
       data.append('retail_outlet', selectedCategory3?.name);
   
       if (photo) {
+        const fileName = `${user.id_sales}_${photo.uri ? photo.uri.split('/').pop() : ''}`;
         data.append('images', {
-          name: photo.uri ? photo.uri.split('/').pop() : '',
+          name: fileName,
           type: mime.getType(photo.uri),
           uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
         });
       }
   
-      //console.log('photo', photo);
+      const response = await Promise.race([
+        fetch(URL_API.url_api + 'input_customer_subdistric_new.php', {
+          method: 'POST',
+          body: data,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }),
+        timeoutPromise
+      ]);
   
-      const response = await fetch(URL_API.url_api + 'input_customer_subdistric_new.php', {
-        method: 'POST',
-        body: data,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      const responseBody = await response.text();
-      //console.log('Response from backend:', responseBody);
-      
-      //console.log('data finis :', data);
-      setName('');
-      setPic('');
-      setPosition('');
-      setPhone('');
-      setAddress('');
-      setLoading(false);
-      navigation.navigate('HomeTab');
-      route.params.photo.uri = null;
-      // setSelectedProvince(null);
-      // setSelectedDistrict(null);
-      // setSelectedSubDistrict(null);
-      // setselectednamePhoto(null);
-      // setSelectedCategory(null);
-      // setSelectedCategory2(null);
-      // setSelectedCategory4(null);
-      // setSelectedCategory3(null);
-
-      alert('Submission successful!');
+      if (response instanceof Response) {
+        const responseBody = await response.text();
+        //console.log('Response from backend:', responseBody);
+        
+        //console.log('data finis :', data);
+        setName('');
+        setPic('');
+        setPosition('');
+        setPhone('');
+        setAddress('');
+        setLoading(false);
+        navigation.navigate('HomeTab');
+        route.params.photo.uri = null;
+  
+        alert('Submission successful!');
+      } else {
+        // Handle timeout
+        throw new Error('Timeout occurred while submitting data. Please check your internet connection and try again.');
+      }
     } catch (error) {
-      
-      alert('Error submitting data. Please try again.');
+      //console.error('Error submitting data:', error.message);
+      alert(error.message); 
+      setLoading(false); 
     }
   };
+  
+  
 
   
   return (

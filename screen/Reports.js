@@ -31,6 +31,7 @@ const HomeScreen = ({ navigation, route }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedVisitDetails, setSelectedVisitDetails] = useState(null);
   const { user } = route.params;
+  const userLogin = user.id_sales;
 
   const formattedSelectedDate = selectedDateVisits
   ? moment(selectedDateVisits).format('YYYY-MM-DD')
@@ -46,9 +47,8 @@ const HomeScreen = ({ navigation, route }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Perform data fetching or refreshing logic here
-    fetchData(); // Assuming fetchData is your data fetching function
-    fetchVisitData(); // Assuming fetchVisitData is your visits data fetching function
+    fetchData(); 
+    // fetchVisitData(); 
     setRefreshing(false);
   };
   
@@ -121,30 +121,30 @@ const HomeScreen = ({ navigation, route }) => {
     });
     setFilteredVisits(filteredData);
   };
-  const fetchVisitData = async () => {
-    try {
-      const response = await fetch(URL_API.url_api + 'open_visit.php', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sales: user.id_sales,
-        }),
-      });
+  // const fetchVisitData = async () => {
+  //   try {
+  //     const response = await fetch(URL_API.url_api + 'coba_uzu_gabung_record.php?type=salesVisit&sales' + userLogin, {
+  //       method: 'GET',
+  //       // headers: {
+  //       //   'Accept': 'application/json',
+  //       //   'Content-Type': 'application/json',
+  //       // },
+  //       // body: JSON.stringify({
+  //       //   sales: user.id_sales,
+  //       // }),
+  //     });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+  //     if (!response.ok) {
+  //       throw new Error('Network response was not ok');
+  //     }
 
-      const data = await response.json();
-      setVisitsData(data);
-      setFilteredVisits(data);
-    } catch (error) {
-     // console.error('Error fetching visit data:', error);
-    }
-  };
+  //     const data = await response.json();
+  //     setVisitsData(data);
+  //     setFilteredVisits(data);
+  //   } catch (error) {
+  //    // console.error('Error fetching visit data:', error);
+  //   }
+  // };
 
   const renderCustomerItem = ({ item }) => (
     <View style={styles.cardContainer}>
@@ -173,7 +173,7 @@ const HomeScreen = ({ navigation, route }) => {
           <Text>Pic: {item.pic}</Text>
           <Text>Note: {item.notes}</Text>
           <Text>Alamat: {item.address}</Text>
-          <Text>Date: {item.date_in}</Text>
+          <Text>Date: {item.date_input}</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -181,34 +181,37 @@ const HomeScreen = ({ navigation, route }) => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch(URL_API.url_api + 'open_customer.php', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sales: user.id_sales,
-        }),
-      });
+      const customerResponse = await fetch(URL_API.url_api + `coba_uzu_gabung_record.php?type=sales&sales=${user.id_sales}`, {
+        method: 'GET',
 
-      if (!response.ok) {
+      });
+  
+      const visitResponse = await fetch(URL_API.url_api + `coba_uzu_gabung_record.php?type=salesVisit&sales=${user.id_sales}`, {
+        method: 'GET',
+
+      });
+      if (!customerResponse.ok || !visitResponse.ok) {
         throw new Error('Network response was not ok');
       }
-
-      const data = await response.json();
-      setCustomerData(data);
-      setFilteredCustomers(data);
-   
+  
+      const customerData = await customerResponse.json();
+      const visitData = await visitResponse.json();
+      
+      setCustomerData(customerData);
+      setFilteredCustomers(customerData);
+      setVisitsData(visitData);
+      setFilteredVisits(visitData);
     } catch (error) {
-     // console.error('Error fetching data:', error);
+      console.error('Error fetching data:', error);
     }
   };
+  
 
   useEffect(() => {
-    setSelectedButton('Customer');
     fetchData();
-    fetchVisitData();
+    setSelectedButton('Visit');
+    setSelectedButton('Customer');
+    setVisitsData();
   }, [user]);
 
   useEffect(() => {
@@ -258,7 +261,7 @@ const HomeScreen = ({ navigation, route }) => {
           value={searchQuery}
         />
         <FlatList
-          data={filteredCustomers.slice(0, 20)}
+          data={filteredCustomers.slice(0, 30)}
           keyExtractor={(item, index) =>
             item.id ? item.id.toString() : index.toString()
           }
@@ -372,7 +375,7 @@ const HomeScreen = ({ navigation, route }) => {
       )} */}
       {selectedButton === 'Visit' && (
         <FlatList
-          data={filteredVisits.slice(0, 20)}
+          data={filteredVisits.slice(0, 30)}
           keyExtractor={(item, index) =>
             item.id ? item.id.toString() : index.toString()
           }

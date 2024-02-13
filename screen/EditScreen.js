@@ -25,6 +25,7 @@ export default function App({ navigation, route }) {
   const [selectedCategory2, setSelectedCategory2] = useState([]);
   const [selectedCategory3, setSelectedCategory3] = useState([]);
   const [selectedCategory4, setSelectedCategory4] = useState([]);
+  const [isOnline, setIsOnline] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [value, setValue] = useState(null);
@@ -46,6 +47,16 @@ export default function App({ navigation, route }) {
 
     fetchData();
   }, []);
+  CekNet = () => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+        console.log("Connection type", state.type);
+        console.log("Is connected?", state.isConnected);
+        setIsOnline(state.isConnected);
+    });
+
+    unsubscribe();
+}
+
   const categories = [
     { id: 1, name: 'Distributor Depo' },
     { id: 2, name: 'SubDist Depo' },
@@ -209,6 +220,7 @@ export default function App({ navigation, route }) {
       alert("Please enter a valid phone number with at least 10 digits.");
       return;
     }
+  
     try {
       setLoading(true);
       const data = new FormData();
@@ -224,30 +236,38 @@ export default function App({ navigation, route }) {
       data.append('tipe_outlet', selectedCategory4?.name || editedItem.tipe_outlet); 
       data.append('retail_outlet', selectedCategory3?.name || editedItem.retail_outlet); 
   
-    if (photo && photo.uri) {
-      data.append('images', {
-        name: photo.uri ? photo.uri.split('/').pop() : '',
-        type: mime.getType(photo.uri),
-        uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
-      });
-    } else {
-    
-      data.append('images', {
-        name: editedItem.images.split('/').pop(),
-        type: mime.getType(editedItem.images),
-        uri: Platform.OS === 'ios' ? editedItem.images.replace('file://', '') : editedItem.images,
-      });
-    }
-
-    data.append('images', editedItem.images);
+      if (photo && photo.uri) {
+        const fileName = `${editedItem.id_cus}_${photo.uri ? photo.uri.split('/').pop() : ''}`;
+        data.append('images', {
+          name: fileName,
+          type: mime.getType(photo.uri),
+          uri: Platform.OS === 'ios' ? photo.uri.replace('file://', '') : photo.uri,
+        });
+      } else {
+        const fileName = `${editedItem.id_cus}_${editedItem.images.split('/').pop()}`;
+        data.append('images', {
+          name: fileName,
+          type: mime.getType(editedItem.images),
+          uri: Platform.OS === 'ios' ? editedItem.images.replace('file://', '') : editedItem.images,
+        });
+      }
+      
   
-      const response = await fetch(URL_API.url_api + 'updatecustomer21_uzu.php', {
+      data.append('images', editedItem.images);
+  
+      const fetchPromise = fetch(URL_API.url_api + 'updatecustomer21_uzu.php', {
         method: 'POST',
         body: data,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+  
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Submission request timeout')), 10000) 
+      );
+  
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
   
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -262,17 +282,13 @@ export default function App({ navigation, route }) {
       alert('Submission successful!');
       navigation.goBack();
     } catch (error) {
-      console.error('Error submitting data:', error.message);
+      //console.error('Error submitting data:', error.message);
       alert('Error submitting data. Please try again.');
     } finally {
       setLoading(false); 
     }
   };
   
-  useEffect(() => {
-    // Set default province when editedItem changes
-    setDefaultProvince(editedItem.province || '');
-  }, [editedItem]);
   
   return (
 
@@ -577,6 +593,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  onlineStatus: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+},
+  onlineText: {
+      color: 'green',
+      fontWeight: 'bold',
+  },
+  offlineText: {
+      color: 'red',
+      fontWeight: 'bold',
+  },
+
   // card: {
   //   backgroundColor: 'white',
   //   borderRadius: 15,
